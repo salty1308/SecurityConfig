@@ -21,7 +21,7 @@ function connect-service($servicetype, $UserCredential){
         Write-error "No Service Type to connect to specified - Service will now stop"
     }
 }
-function exchange-config(){
+function config-exchange(){
     #configure exchange to prevent client forwarding
     new-transportrule "Client Rules to External Blocking" -senttoscope NotInOrganization -MessageTypeMatches AutoForward -FromScope InOrganization -RejectMessageReasonText 'Client Forwarding Rules To External Domains Are Not Permitted.' -Comments "Generated to prevent forwarding on clients within the organisation"
     
@@ -30,12 +30,12 @@ function exchange-config(){
 
     #Double-Check It!
     #Get-Mailbox -ResultSize Unlimited | Select Name, AuditEnabled, AuditLogAgeLimit | Out-Gridview
-}function 365-config(){
+}
+function config-365(){
     $O365ROLE = Get-MsolRole -RoleName “Company Administrator”
     $GlobalAdmins = Get-MsolRoleMember -RoleObjectId $O365ROLE.ObjectId
     foreach($item in $GlobalAdmins){
-         $item.EmailAddress
-        pause
+         enforce-mfa $item.emailaddress "Disabled"
     }
 }
 
@@ -51,21 +51,23 @@ function SOG-PasswordReset($upn) {
     Write-Output "We've set the password for the account $upn to be $newPassword. Make sure you record this and share with the user, or be ready to reset the password again. They will have to reset their password on the next logon."
     
     Set-MsolUser -UserPrincipalName $upn -StrongPasswordRequired $True
-    Write-Output "We've also set this user's account to require a strong password."
-
 }
 
 function enforce-mfa($upn, $enforceType){
     $auth = New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationRequirement
     $auth.RelyingParty = "*"
+    $auth.RememberDevicesNotIssuedBefore = (Get-Date)
     if($enforceType -eq "Enforced"){
         $auth.State = "Enforced"
+    }elseif($enforceType -eq "Disabled"){
+        $auth = @()
     }else{
         $auth.State = "Enabled"
     }
-    $auth.RememberDevicesNotIssuedBefore = (Get-Date)
+    
+
     Set-MsolUser -UserPrincipalName $upn -StrongAuthenticationRequirements $auth
 
-    Get-MsolUser -UserPrincipalName $upn | select UserPrincipalName,StrongAuthenticationMethods,StrongAuthenticationRequirements
+    #Get-MsolUser -UserPrincipalName $upn | select UserPrincipalName,StrongAuthenticationMethods,StrongAuthenticationRequirements
 }
 
