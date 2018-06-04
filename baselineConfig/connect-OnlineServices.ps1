@@ -34,8 +34,9 @@ function config-exchange(){
 function config-365(){
     $O365ROLE = Get-MsolRole -RoleName “Company Administrator”
     $GlobalAdmins = Get-MsolRoleMember -RoleObjectId $O365ROLE.ObjectId
+    $mfaType = read-host "MFA type: [Enforced|Enabled|Disabled] Default is Enabled :"
     foreach($item in $GlobalAdmins){
-         enforce-mfa $item.emailaddress "Disabled"
+         enforce-mfa $item.emailaddress $mfaType
     }
 }
 
