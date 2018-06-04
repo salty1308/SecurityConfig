@@ -55,11 +55,14 @@ function SOG-PasswordReset($upn) {
 
 }
 
-function enforce-mfa($upn){
+function enforce-mfa($upn, $enforceType){
     $auth = New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationRequirement
     $auth.RelyingParty = "*"
-    #$auth.State = "Enabled"
-    $auth.State = "Enforced"
+    if($enforceType -eq "Enforced"){
+        $auth.State = "Enforced"
+    }else{
+        $auth.State = "Enabled"
+    }
     $auth.RememberDevicesNotIssuedBefore = (Get-Date)
     Set-MsolUser -UserPrincipalName $upn -StrongAuthenticationRequirements $auth
 
