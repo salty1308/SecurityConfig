@@ -31,10 +31,12 @@ function config-exchange(){
     #Double-Check It!
     #Get-Mailbox -ResultSize Unlimited | Select Name, AuditEnabled, AuditLogAgeLimit | Out-Gridview
 }
-function config-365(){
+function config-365($mfaType){
     $O365ROLE = Get-MsolRole -RoleName “Company Administrator”
     $GlobalAdmins = Get-MsolRoleMember -RoleObjectId $O365ROLE.ObjectId
-    $mfaType = read-host "MFA type: [Enforced|Enabled|Disabled] Default is Enabled :"
+    if($mfaType -eq $null){
+        $mfaType = read-host "MFA type: [Enforced|Enabled|Disabled] Default is Enabled :"
+    }if($mfaType -eq $null){$mfaType = "ENABLED"}
     foreach($item in $GlobalAdmins){
          enforce-mfa $item.emailaddress $mfaType
     }
@@ -44,10 +46,12 @@ function SOG-exchangerules($upn){
     Get-InboxRule -Mailbox $upn | Remove-InboxRule
 }
 
-[Reflection.Assembly]::LoadWithPartialName("System.Web") 
+[Reflection.Assembly]::LoadWithPartialName("System.Web") | Out-Null
 
-function SOG-PasswordReset($upn) {
-    $newPassword = ([System.Web.Security.Membership]::GeneratePassword(16,2))
+function SOG-PasswordReset($upn, $newPassword) {
+    if($newPassword -eq $null){
+        $newPassword = ([System.Web.Security.Membership]::GeneratePassword(16,2))
+    }
     Set-MsolUserPassword –UserPrincipalName $upn –NewPassword $newPassword -ForceChangePassword $True
     Write-Output "We've set the password for the account $upn to be $newPassword. Make sure you record this and share with the user, or be ready to reset the password again. They will have to reset their password on the next logon."
     
@@ -58,15 +62,13 @@ function enforce-mfa($upn, $enforceType){
     $auth = New-Object -TypeName Microsoft.Online.Administration.StrongAuthenticationRequirement
     $auth.RelyingParty = "*"
     $auth.RememberDevicesNotIssuedBefore = (Get-Date)
-    if($enforceType -eq "Enforced"){
+    if(($enforceType.toupper()) -eq "ENFORCED"){
         $auth.State = "Enforced"
-    }elseif($enforceType -eq "Disabled"){
+    }elseif(($enforceType.toupper()) -eq "DISABLED"){
         $auth = @()
     }else{
         $auth.State = "Enabled"
     }
-    
-
     Set-MsolUser -UserPrincipalName $upn -StrongAuthenticationRequirements $auth
 
     #Get-MsolUser -UserPrincipalName $upn | select UserPrincipalName,StrongAuthenticationMethods,StrongAuthenticationRequirements
