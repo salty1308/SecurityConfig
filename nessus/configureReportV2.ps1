@@ -1,4 +1,6 @@
-﻿$csv = Import-Csv -Path "myfilepath"
+﻿$csv = Read-Host "CSV location"
+$csv = Import-Csv $csv
+
 $lowRisk = $csv | ?{$_.risk -eq "Low"}
 $medRisk = $csv | ?{$_.risk -eq "Medium"}
 $HighRisk = $csv | ?{$_.risk -eq "High"}
@@ -16,10 +18,38 @@ Write-Host $lowRisk.count
 Write-Host -NoNewline "Informational:: "
 Write-Host $Info.count
 
-$outfile = $critRisk | select -Unique name,risk,host,cvss 
-$outfile += $HighRisk | select -Unique name,risk,host,cvss
-$outfile += $medRisk | select -Unique name,risk,host,cvss 
-$outfile += $lowRisk | select -Unique name,risk,host,cvss 
+$outfile = $critRisk | select -Unique name,risk,host,cvss,port,synopsis,description,solution,"plugin output","see also","plugin id"
+$outfile += $HighRisk | select -Unique name,risk,host,cvss,port,synopsis,description,solution,"plugin output","see also","plugin id"
+$outfile += $medRisk | select -Unique name,risk,host,cvss,port,synopsis,description,solution,"plugin output","see also","plugin id"
+$outfile += $lowRisk | select -Unique name,risk,host,cvss,port,synopsis,description,solution,"plugin output","see also" ,"plugin id"
 
+#generates the host data view
 $outfile | select host,risk,cvss,name | Export-Csv -Path C:\temp\nessustest.csv | Out-Null
+
+#gernerate a vulnerability view
+$outfile.count #how may issues to deal with (To Be Removed)
+$vulnNames = $outfile | select -Unique name
+Write-Host -NoNewline "Different types of vulnerabilities:: "
+Write-Host $vulnNames.count
+
+$VulnData = $outfile | Group-Object -Property name 
+
+$out = @()
+$output = New-Object System.Object
+$VulnData| foreach{
+    $output = New-Object System.Object
+    $output | Add-Member -type NoteProperty -name Name -Value $_.name
+    $tmp =""
+    $_.Group.host | foreach{
+        $tmp += $_ +" "
+    }
+    $output | Add-Member -type NoteProperty -name host -Value ($tmp)
+    $output | Add-Member -type NoteProperty -name cvss -Value ($_.group.cvss | select -Unique)
+    $output | Add-Member -type NoteProperty -name port -Value ($_.Group.port| select -Unique)
+    $output | Add-Member -type NoteProperty -name synopsis -Value ($_.Group.synopsis| select -Unique)
+    $output | Add-Member -type NoteProperty -name description -Value ($_.Group.description | select -Unique)
+    $output | Add-Member -type NoteProperty -name solution -Value ($_.Group.solution | select -Unique)
+    $out += $output
+}
+$out | Export-Csv C:\temp\nessustest.csv
 
