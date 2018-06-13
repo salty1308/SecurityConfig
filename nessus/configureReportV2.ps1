@@ -1,5 +1,5 @@
-﻿$csv = Read-Host "CSV location"
-$csv = Import-Csv $csv
+﻿
+$csv = Import-Csv -Path "C:\Nessus\VM-L-VC-C-U_67d31s.csv"
 
 $lowRisk = $csv | ?{$_.risk -eq "Low"}
 $medRisk = $csv | ?{$_.risk -eq "Medium"}
@@ -24,7 +24,7 @@ $outfile += $medRisk | select -Unique name,risk,host,cvss,port,synopsis,descript
 $outfile += $lowRisk | select -Unique name,risk,host,cvss,port,synopsis,description,solution,"plugin output","see also" ,"plugin id"
 
 #generates the host data view
-$outfile | select host,risk,cvss,name | Export-Csv -Path C:\temp\nessustest.csv | Out-Null
+$outfile | select host,risk,cvss,name | Export-Csv -Path C:\temp\perhostReport.csv | Out-Null
 
 #gernerate a vulnerability view
 $outfile.count #how may issues to deal with (To Be Removed)
@@ -43,13 +43,13 @@ $VulnData| foreach{
     $_.Group.host | foreach{
         $tmp += $_ +" "
     }
-    $output | Add-Member -type NoteProperty -name host -Value ($tmp)
-    $output | Add-Member -type NoteProperty -name cvss -Value ($_.group.cvss | select -Unique)
-    $output | Add-Member -type NoteProperty -name port -Value ($_.Group.port| select -Unique)
-    $output | Add-Member -type NoteProperty -name synopsis -Value ($_.Group.synopsis| select -Unique)
-    $output | Add-Member -type NoteProperty -name description -Value ($_.Group.description | select -Unique)
-    $output | Add-Member -type NoteProperty -name solution -Value ($_.Group.solution | select -Unique)
+    $output | Add-Member -type NoteProperty -name Host -Value ($tmp)
+    $output | Add-Member -type NoteProperty -name CVSS -Value ($_.group.cvss | select -Unique)
+    $output | Add-Member -type NoteProperty -name Port -Value ($_.Group.port| select -Unique)
+    $output | Add-Member -type NoteProperty -name Synopsis -Value ($_.Group.synopsis| select -Unique)
+    $output | Add-Member -type NoteProperty -name Description -Value ($_.Group.description | select -Unique)
+    $output | Add-Member -type NoteProperty -name Solution -Value ($_.Group.solution | select -Unique)
     $out += $output
 }
-$out | Export-Csv C:\temp\nessustest.csv
+$out | Export-Csv C:\temp\PerVulnReport.csv
 
